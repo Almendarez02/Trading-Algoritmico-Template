@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./app
+    container_name: app_container
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app:/main
+    environment:
+      - FLASK_ENV=development
+  ml_models:
+    build:
+      context: ./ml_models
+    container_name: ml_container
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./ml_models:/main  # Sincroniza los archivos locales con el contenedor
+
+  orchestrator:
+    build:
+      context: ./orchestrator
+    container_name: orchestrator_container
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./orchestrator:/main
+    depends_on:
+      - app
+      - ml_models
+
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+#Puede ser los nombres o puede ser lo escrito en el dockerfile.
+
+#Como dejar de hacer tonterias como adulto
