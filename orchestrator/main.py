@@ -15,7 +15,7 @@ def health_check():
 
 def send_results_to_ui(predictions):
     try:
-        ui_results_url = 'http://localhost:5000/interface'
+        ui_results_url = 'http://app:5000/interface'
         payload = {'predictions': predictions}
         response = requests.post(ui_results_url, json=payload)
         if response.status_code == 200:
@@ -38,26 +38,40 @@ def handle_upload():
 
         file = request.files['file']
         model = request.form.get('model', 'amazon')
+        amount = request.form.get('amount')
+        holding_days = request.form.get('holding_days')
 
         logger.debug(f"Archivo recibido: {file.filename}")
         logger.debug(f"Modelo seleccionado: {model}")
+        logger.debug(f"Cantidad a invertir: {amount}")
+        logger.debug(f"Días de holding: {holding_days}")
 
         df = pd.read_csv(file)
         logger.debug(f"DataFrame cargado con las siguientes columnas: {df.columns}")
 
-        model_url = f'http://localhost:5001/{model}/predict'
+        model_url = f'http://ml_models:5001/{model}/predict'
         file_content_transformed = df.to_csv(index=False)
+
+        # Preparar la solicitud para el modelo ML
+        files = {'file': (file.filename, file_content_transformed, 'text/csv')}
+        data = {
+            'amount': amount,
+            'holding_days': holding_days
+        }
 
         response = requests.post(
             model_url,
-            files={'file': (file.filename, file_content_transformed, 'text/csv')}
+            files=files,
+            data=data
         )
 
         if response.status_code == 200:
             logger.debug(f"Archivo enviado exitosamente al modelo: {model_url}")
             predictions = response.json()['prediction']
-            #send_results_to_ui(predictions)
-            return jsonify({'message': 'Archivo enviado exitosamente al modelo', 'predictions': predictions}), 200
+            return jsonify({
+                'message': 'Archivo enviado exitosamente al modelo',
+                'predictions': predictions
+            }), 200
         else:
             logger.error(f"Error al enviar el archivo al modelo: {response.text}")
             return jsonify({'error': f"Error del modelo: {response.text}"}), response.status_code
@@ -70,6 +84,5 @@ def handle_upload():
             'traceback': traceback.format_exc()
         }), 500
 
-
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    app.run(host="0.0.0.0", debug=True, port=5002)

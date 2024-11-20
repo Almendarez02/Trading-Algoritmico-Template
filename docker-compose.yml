@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   app:
     build:
@@ -8,9 +6,15 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./app:/main
+      - ./app:/app  # Cambia el volumen a la carpeta correcta en el contenedor
     environment:
       - FLASK_ENV=development
+      - MONGO_URI=mongodb://mongo:27017
+    depends_on:
+      - mongo  # Asegura que Mongo esté iniciado antes que app
+    networks:
+      - app_network
+
   ml_models:
     build:
       context: ./ml_models
@@ -18,7 +22,9 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - ./ml_models:/main  # Sincroniza los archivos locales con el contenedor
+      - ./ml_models:/app
+    networks:
+      - app_network
 
   orchestrator:
     build:
@@ -27,10 +33,12 @@ services:
     ports:
       - "5002:5002"
     volumes:
-      - ./orchestrator:/main
+      - ./orchestrator:/app
     depends_on:
       - app
       - ml_models
+    networks:
+      - app_network
 
   mongo:
     image: mongo
@@ -39,9 +47,14 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    networks:
+      - app_network
 
+# Volumen persistente para MongoDB
 volumes:
   mongo_data:
-#Puede ser los nombres o puede ser lo escrito en el dockerfile.
 
-#Como dejar de hacer tonterias como adulto
+# Red para todos los servicios
+networks:
+  app_network:
+    driver: bridge

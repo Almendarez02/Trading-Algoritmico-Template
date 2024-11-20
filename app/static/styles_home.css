@@ -13,16 +13,7 @@ header {
     padding: 20px;
 }
 
-/* Estilo del header nav */
-header nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background-color: #f4f4f4; /* Fondo azul del nav */
-    border-radius: 10px; /* Esquinas redondeadas */
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Sombra para el nav */
-}
+
 
 /* Estilo del logo */
 .logo {
@@ -40,17 +31,7 @@ header h1 {
     flex-grow: 1;
 }
 
-/* Estilo de enlaces en el nav */
-header nav a {
-    margin-left: 20px;
-    color: black; /* Enlaces en blanco para contraste */
-    text-decoration: none;
-    font-size: 16px;
-}
 
-header nav a:hover {
-    text-decoration: underline;
-}
 
 /* Centrado de las preguntas en el main */
 main {
@@ -156,4 +137,57 @@ footer {
     color: #333;
     font-size: 14px;
     margin-top: 40px;
+}
+
+
+
+/* Estilo del nav */
+header nav {
+    display: flex;
+    align-items: center; /* Centra los elementos verticalmente */
+    justify-content: space-between; /* Espaciado uniforme entre las secciones */
+    padding: 10px 20px;
+    background-color: #f4f4f4;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Contenedor del logo y título */
+.nav-left {
+    display: flex;
+    align-items: center; /* Alinea el logo y el título verticalmente */
+}
+
+.nav-left img.logo {
+    height: 50px; /* Tamaño del logo principal */
+    margin-right: 10px; /* Espacio entre el logo y el título */
+}
+
+/* Contenedor del texto y logo "Powered by" */
+.nav-powered {
+    display: flex;
+    align-items: center; /* Alinea el texto y el logo verticalmente */
+}
+
+#powerade {
+    font-size: 14px; /* Tamaño más pequeño */
+    margin: 0 5px; /* Espacio alrededor del texto */
+    color: gray;
+}
+
+#alpaca_logo {
+    height: 25px; /* Tamaño reducido del logo de Alpaca */
+    width: auto; /* Mantener proporción del logo */
+}
+
+/* Enlaces de navegación */
+header nav a {
+    margin-left: 20px;
+    color: black;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+header nav a:hover {
+    text-decoration: underline;
 }

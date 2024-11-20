@@ -2,10 +2,8 @@ from flask import Blueprint, render_template, session, redirect, url_for, reques
 from db_models.model_user import get_user_by_username, User
 from db_models.model_api_key import APIKey
 import requests
-from flask_socketio import emit
 import logging
 import tempfile
-import socketio
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -16,6 +14,20 @@ ALLOWED_EXTENSIONS = {'csv'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def validate_trading_params(amount, holding_days):
+    try:
+        amount = float(amount)
+        holding_days = int(holding_days)
+        
+        if amount <= 0:
+            return False, "La cantidad de dinero debe ser mayor que 0"
+        if holding_days <= 0:
+            return False, "Los días de holding deben ser mayor que 0"
+            
+        return True, None
+    except ValueError:
+        return False, "Valores inválidos para cantidad de dinero o días de holding"
 
 @user_bp.route('/interface', methods=['GET', 'POST'])
 def interface():
@@ -91,6 +103,7 @@ def send_csv():
     try:
         logger.debug("=== Iniciando proceso de upload_csv ===")
 
+        # Validar archivo
         if 'file' not in request.files:
             logger.error("No se encontró archivo en la solicitud")
             return jsonify({'error': 'No file part'}), 400
@@ -100,26 +113,37 @@ def send_csv():
             logger.error("El archivo esta vacio o no esta en un formato valido")
             return jsonify({'error': 'Invalid file'}), 400
 
+        # Obtener y validar parámetros de trading
+        amount = request.form.get('amount', '0')
+        holding_days = request.form.get('holding_days', '0')
+        
+        is_valid, error_message = validate_trading_params(amount, holding_days)
+        if not is_valid:
+            return jsonify({'error': error_message}), 400
+
         if file and allowed_file(file.filename):
             try:
-                # Crear un archivo temporal usando tempfile
+                # Crear archivo temporal
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
-
-                # Guardar el contenido del archivo en el temporal
                 file.save(temp_file.name)
-                temp_file.close()  # Cerrar el archivo explícitamente
+                temp_file.close()
 
-                # Obtener el modelo seleccionado
+                # Obtener modelo seleccionado
                 model = request.form.get('model', 'amazon')
                 logger.debug(f"Modelo seleccionado: {model}")
+                logger.debug(f"Cantidad a invertir: {amount}")
+                logger.debug(f"Días de holding: {holding_days}")
 
                 # Enviar al orquestador
-                orchestrator_url = 'http://localhost:5002/upload'
-                logger.debug(f"Enviando archivo a orquestador: {orchestrator_url}")
-
+                orchestrator_url = 'http://orchestrator:5002/upload'
+                
                 with open(temp_file.name, 'rb') as f:
                     files = {'file': (file.filename, f, 'text/csv')}
-                    data = {'model': model}
+                    data = {
+                        'model': model,
+                        'amount': amount,
+                        'holding_days': holding_days
+                    }
 
                     logger.debug("Realizando solicitud POST al orquestador")
                     response = requests.post(orchestrator_url, files=files, data=data)
@@ -129,8 +153,6 @@ def send_csv():
 
                     if response.status_code == 200:
                         predictions = response.json()
-                        # Emitir los resultados a través de WebSocket
-                        emit('prediction_results', predictions, namespace='/', broadcast=True)
                         return jsonify(predictions)
                     else:
                         logger.error(f"Error del orquestador: {response.text}")
@@ -140,7 +162,7 @@ def send_csv():
                 logger.error(f"Error en el procesamiento del archivo: {str(e)}", exc_info=True)
                 return jsonify({'error': f'Error detallado: {str(e)}'}), 500
             finally:
-                # Limpiar el archivo temporal
+                # Limpiar archivo temporal
                 if temp_file is not None:
                     try:
                         import os
@@ -155,37 +177,3 @@ def send_csv():
     except Exception as e:
         logger.error(f"Error general en upload_csv: {str(e)}", exc_info=True)
         return jsonify({'error': f'Error general: {str(e)}'}), 500
-
-
-
-
-"""
-@user_bp.route('/select_stock', methods=['POST'])
-def select_stock():
-    stock = request.form.get('stock')
-    # Aquí puedes manejar la lógica para el stock seleccionado
-    print(f"Stock seleccionado: {stock}")  # Solo para verificar
-    return redirect(url_for('user_bp.index'))
-
-
-### 10-02-24
-@user_bp.route('/start_trading', methods=['POST'])
-def start_trading():
-    algorithm = request.form['algorithm']
-    api_key_id = request.form['api_key_id']
-    amount = request.form['amount']
-    units = request.form['units']
-    duration = request.form['duration']
-
-    # Aquí colocarías la lógica para iniciar el proceso de trading
-    # Puedes usar un temporizador para ejecutar las órdenes basadas en la duración
-
-    return redirect(url_for('user_bp.interface'))
-
-
-@user_bp.route('/stop_trading', methods=['POST'])
-def stop_trading():
-    # Lógica para detener el proceso de trading
-    return redirect(url_for('user_bp.interface'))
-
-"""
